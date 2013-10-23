@@ -463,7 +463,7 @@ public class POSTaggerTester {
    * will forbid illegal tag trigrams, otherwise it makes no use of tag history
    * information whatsoever.
    */
-  static class MostFrequentTagScorer implements LocalTrigramScorer {
+  public static class MostFrequentTagScorer implements LocalTrigramScorer {
 
     boolean restrictTrigrams; // if true, assign log score of Double.NEGATIVE_INFINITY to illegal tag trigrams.
 
@@ -492,7 +492,7 @@ public class POSTaggerTester {
       return logScoreCounter;
     }
 
-    private Set<String> allowedFollowingTags(Set<String> tags, String previousPreviousTag, String previousTag) {
+    protected Set<String> allowedFollowingTags(Set<String> tags, String previousPreviousTag, String previousTag) {
       Set<String> allowedTags = new HashSet<String>();
       for (String tag : tags) {
         String trigramString = makeTrigramString(previousPreviousTag, previousTag, tag);
@@ -504,7 +504,11 @@ public class POSTaggerTester {
     }
 
     private String makeTrigramString(String previousPreviousTag, String previousTag, String currentTag) {
-      return previousPreviousTag + " " + previousTag + " " + currentTag;
+        return previousPreviousTag + " " + previousTag + " " + currentTag;
+    }
+
+    protected String makeBigramString(String previousTag, String currentTag) {
+        return previousTag + " " + currentTag;
     }
 
     public void train(List<LabeledLocalTrigramContext> labeledLocalTrigramContexts) {
@@ -631,6 +635,7 @@ public class POSTaggerTester {
 
     // Set up default parameters and settings
     String basePath = ".";
+    String model = "base";
     boolean verbose = false;
     boolean useValidation = true;
 
@@ -641,6 +646,14 @@ public class POSTaggerTester {
       basePath = argMap.get("-path");
     }
     System.out.println("Using base path: " + basePath);
+
+    // Choose model
+    if (argMap.containsKey("-model")) {
+       if (argMap.get("-model").equals("hmm")) {
+           model = "hmm";
+       }
+    }
+    System.out.println("Using model: " + model);
 
     // Whether to use the validation or test set
     if (argMap.containsKey("-test")) {
@@ -668,9 +681,18 @@ public class POSTaggerTester {
     System.out.println("done.");
 
     // Construct tagger components
+    LocalTrigramScorer localTrigramScorer;
     // TODO : improve on the MostFrequentTagScorer
-    LocalTrigramScorer localTrigramScorer = new MostFrequentTagScorer(false);
-    // TODO : improve on the GreedyDecoder
+    if (model.equals("base")) {
+        localTrigramScorer = new MostFrequentTagScorer(false);
+    } else if (model.equals("hmm")) {
+        localTrigramScorer = new SequenceTagScorer(false);
+    } else {
+        throw new RuntimeException("Unknown model");
+    }
+
+
+      // TODO : improve on the GreedyDecoder
     TrellisDecoder<State> trellisDecoder = new GreedyDecoder<State>();
 
     // Train tagger
