@@ -247,7 +247,7 @@ public class POSTaggerTester {
   /**
    * A TrellisDecoder takes a Trellis and returns a path through that trellis in
    * which the first item is trellis.getStartState(), the last is
-   * trellis.getEndState(), and each pair of states is conntected in the
+   * trellis.getEndState(), and each pair of states is connected in the
    * trellis.
    */
   static interface TrellisDecoder <S> {
@@ -636,6 +636,7 @@ public class POSTaggerTester {
     // Set up default parameters and settings
     String basePath = ".";
     String model = "base";
+    String decoder = "greedy";
     boolean verbose = false;
     boolean useValidation = true;
 
@@ -648,12 +649,16 @@ public class POSTaggerTester {
     System.out.println("Using base path: " + basePath);
 
     // Choose model
-    if (argMap.containsKey("-model")) {
-       if (argMap.get("-model").equals("hmm")) {
-           model = "hmm";
-       }
+      if (argMap.containsKey("-model")) {
+          model = argMap.get("-model");
+      }
+      System.out.println("Using model: " + model);
+
+    // Choose model
+    if (argMap.containsKey("-decoder")) {
+      decoder = argMap.get("-decoder");
     }
-    System.out.println("Using model: " + model);
+    System.out.println("Using decoder: " + decoder);
 
     // Whether to use the validation or test set
     if (argMap.containsKey("-test")) {
@@ -691,9 +696,15 @@ public class POSTaggerTester {
         throw new RuntimeException("Unknown model");
     }
 
+    TrellisDecoder<State> trellisDecoder;
+    if (decoder.equals("greedy")) {
+        trellisDecoder = new GreedyDecoder<State>();
+    } else if (decoder.equals("veterbi")) {
+        trellisDecoder = new VeterbiDecoder<State>();
+    } else {
+        throw new RuntimeException("Unknown decoder");
+    }
 
-      // TODO : improve on the GreedyDecoder
-    TrellisDecoder<State> trellisDecoder = new GreedyDecoder<State>();
 
     // Train tagger
     POSTagger posTagger = new POSTagger(localTrigramScorer, trellisDecoder);
