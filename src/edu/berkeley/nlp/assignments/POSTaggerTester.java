@@ -250,11 +250,19 @@ public class POSTaggerTester {
    * trellis.getEndState(), and each pair of states is connected in the
    * trellis.
    */
-  static interface TrellisDecoder <S> {
-    List<S> getBestPath(Trellis<S> trellis);
+  static abstract class TrellisDecoder <S> {
+    public abstract List<S> getBestPath(Trellis<S> trellis);
+
+    protected List<S> buildStateFromBackPointers(Trellis<S> trellis, Map<S,S> backPointers) {
+      List<S> states = new ArrayList<S>();
+      for (S stateIterator = trellis.getEndState(); stateIterator != null; stateIterator = backPointers.get(stateIterator)) {
+          states.add(0, stateIterator);
+      }
+      return states;
+    }
   }
 
-  static class GreedyDecoder <S> implements TrellisDecoder<S> {
+  static class GreedyDecoder <S> extends TrellisDecoder<S> {
     public List<S> getBestPath(Trellis<S> trellis) {
       List<S> states = new ArrayList<S>();
       S currentState = trellis.getStartState();
@@ -701,6 +709,8 @@ public class POSTaggerTester {
         trellisDecoder = new GreedyDecoder<State>();
     } else if (decoder.equals("veterbi")) {
         trellisDecoder = new VeterbiDecoder<State>();
+    } else if (decoder.equals("bad_veterbi")) {
+        trellisDecoder = new SlowVeterbiDecoder<State>();
     } else {
         throw new RuntimeException("Unknown decoder");
     }
