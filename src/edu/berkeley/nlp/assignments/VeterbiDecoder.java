@@ -10,6 +10,7 @@ import java.util.*;
 /**
  * @author Keith Stone
  * Implements the Veterbi Algorithm to find the highest scoring path through the trellis.
+ * Runs in O(n*T^3) as shown below where n is the length of the trellis and T is the size of the tag set
  */
 public class VeterbiDecoder<S> extends POSTaggerTester.TrellisDecoder<S> {
     public List<S> getBestPath(POSTaggerTester.Trellis<S> trellis) {
@@ -26,9 +27,14 @@ public class VeterbiDecoder<S> extends POSTaggerTester.TrellisDecoder<S> {
         maxValuesForStates.put(trellis.getStartState(), 0.0);
 
         // Stop when the graph has been exhausted
+        // O(n) as this triggers a stepping process
         while (openSet.size() > 0) {
+            // O(T * T) as the open set grows to be at most |TagSet| squared
+            // in fact if the tag set is smoothed as well as emission except near the beginning and end
+            // the open set should be T*T
             for (S currentState : openSet) {
                 Counter<S> forwardTransitions = trellis.getForwardTransitions(currentState);
+                // O(T) as we must consider each possible transition to the next tag
                 for (S nextState : forwardTransitions.keySet()) {
                     nextSet.add(nextState);
 
@@ -42,6 +48,8 @@ public class VeterbiDecoder<S> extends POSTaggerTester.TrellisDecoder<S> {
                 }
             }
             // Cycle the sets, again, likely not needed but seems like an easy enough sanity check.
+            if (nextSet.size() > Math.pow(47.0, 2.0))
+                throw new RuntimeException("Size of the next set is too large");
             openSet = nextSet;
             nextSet = new HashSet<S>();
         }

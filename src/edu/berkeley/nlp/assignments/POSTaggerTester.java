@@ -476,6 +476,7 @@ public class POSTaggerTester {
     boolean restrictTrigrams; // if true, assign log score of Double.NEGATIVE_INFINITY to illegal tag trigrams.
 
     CounterMap<String, String> wordsToTags = new CounterMap<String, String>();
+    Counter<String> wordCounts = new Counter<String>();
     Counter<String> unknownWordTags = new Counter<String>();
     Set<String> seenTagTrigrams = new HashSet<String>();
 
@@ -529,6 +530,7 @@ public class POSTaggerTester {
           unknownWordTags.incrementCount(tag, 1.0);
         }
         wordsToTags.incrementCount(word, tag, 1.0);
+        wordCounts.incrementCount(word, 1.0);
         seenTagTrigrams.add(makeTrigramString(labeledLocalTrigramContext.getPreviousPreviousTag(), labeledLocalTrigramContext.getPreviousTag(), labeledLocalTrigramContext.getCurrentTag()));
       }
       wordsToTags = Counters.conditionalNormalize(wordsToTags);
@@ -563,6 +565,7 @@ public class POSTaggerTester {
     double numUnknownWords = 0.0;
     double numUnknownWordsCorrect = 0.0;
     int numDecodingInversions = 0;
+    int sentencesDecoded = 0;
     for (TaggedSentence taggedSentence : taggedSentences) {
       List<String> words = taggedSentence.getWords();
       List<String> goldTags = taggedSentence.getTags();
@@ -577,16 +580,20 @@ public class POSTaggerTester {
         if (!trainingVocabulary.contains(word)) {
           if (guessedTag.equals(goldTag))
             numUnknownWordsCorrect += 1.0;
+          else
+            if (verbose) System.out.println(word + "," + goldTag + "," + guessedTag);
           numUnknownWords += 1.0;
         }
       }
+      sentencesDecoded++;
       double scoreOfGoldTagging = posTagger.scoreTagging(taggedSentence);
       double scoreOfGuessedTagging = posTagger.scoreTagging(new TaggedSentence(words, guessedTags));
       if (scoreOfGoldTagging > scoreOfGuessedTagging) {
         numDecodingInversions++;
-        if (verbose) System.out.println("WARNING: Decoder suboptimality detected.  Gold tagging has higher score than guessed tagging.");
+        if (verbose) throw new RuntimeException("WARNING: Decoder suboptimality detected.  Gold tagging has higher score than guessed tagging.");
       }
       if (verbose) System.out.println(alignedTaggings(words, goldTags, guessedTags, true) + "\n");
+      if (sentencesDecoded % 20 == 0) System.out.println(sentencesDecoded + " out of " + taggedSentences.size());
     }
     System.out.println("Tag Accuracy: " + (numTagsCorrect / numTags) + " (Unknown Accuracy: " + (numUnknownWordsCorrect / numUnknownWords) + ")  Decoder Suboptimalities Detected: " + numDecodingInversions);
   }
